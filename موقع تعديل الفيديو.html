@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موقع تعديل وتحميل الفيديو</title>
+    <style>
+        /* تنسيقات الصفحة */
+        body, html {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+            color: #333;
+            text-align: center;
+            overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin: 20px;
+            color: #FFD700;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        .video-container {
+            margin-top: 20px;
+            max-width: 90%;
+            max-height: 500px;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+        }
+        video {
+            width: 100%;
+            max-height: 500px;
+            transition: all 0.3s ease;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+        }
+        .controls label, .controls button {
+            margin: 10px;
+            font-weight: bold;
+        }
+        .controls input[type="range"], .controls select {
+            width: 300px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #203a43;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: #FFC300;
+            transform: scale(1.05);
+        }
+        #downloadBtn {
+            display: none;
+            margin-top: 20px;
+        }
+        #progressBar {
+            width: 0;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 4px;
+            margin-top: 15px;
+            transition: width 0.4s ease;
+        }
+        .filters-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            width: 90%;
+        }
+        /* الوضع الليلي */
+        .dark-mode {
+            background: #333;
+            color: #f0f0f0;
+        }
+        /* استعلامات الوسائط للتوافق مع مختلف الشاشات */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            .controls input[type="range"], .controls select {
+                width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+            .controls input[type="range"], .controls select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>موقع تعديل وتحميل الفيديو</h1>
+    
+    <input type="file" id="uploadVideo" accept="video/*">
+    
+    <div class="controls">
+        <label for="borderRadius">تحديد درجة الزوايا بدقة عالية:</label>
+        <input type="range" id="borderRadius" min="0" max="100" value="0" step="1">
+        
+        <label for="rotation">درجة التدوير:</label>
+        <input type="range" id="rotation" min="0" max="360" value="0">
+        
+        <button onclick="toggleFilters()">عرض/إخفاء شريط الفلاتر</button>
+        <div class="filters-container" id="filtersContainer">
+            <label for="filter">إضافة فلتر:</label>
+            <select id="filter">
+                <option value="none">بدون</option>
+                <option value="grayscale">تدرج رمادي</option>
+                <option value="sepia">سيبيا</option>
+                <option value="invert">عكس الألوان</option>
+            </select>
+        </div>
+        
+        <button onclick="toggleDarkMode()">تبديل الوضع الليلي/النهاري</button>
+        
+        <button onclick="previewVideo()">زر المعاينة</button>
+    </div>
+    
+    <div class="video-container" id="videoContainer">
+        <video id="videoPreview" controls></video>
+    </div>
+    
+    <div id="progressBarContainer" style="width: 300px; background: #ccc; border-radius: 4px; margin-top: 15px; display: none;">
+        <div id="progressBar"></div>
+    </div>
+    
+    <button onclick="downloadVideo()" id="downloadBtn">تحميل الفيديو</button>
+    
+    <script>
+        let videoFile;
+        const videoPreview = document.getElementById('videoPreview');
+        const videoContainer = document.getElementById('videoContainer');
+        const borderRadiusInput = document.getElementById('borderRadius');
+        const rotationInput = document.getElementById('rotation');
+        const filterInput = document.getElementById('filter');
+        const progressBar = document.getElementById('progressBar');
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const filtersContainer = document.getElementById('filtersContainer');
+
+        document.getElementById('uploadVideo').addEventListener('change', function(event) {
+            videoFile = event.target.files[0];
+            if (videoFile) {
+                const videoURL = URL.createObjectURL(videoFile);
+                videoPreview.src = videoURL;
+                videoContainer.style.display = 'block';
+                videoContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        borderRadiusInput.addEventListener('input', function() {
+            videoPreview.style.borderRadius = borderRadiusInput.value + 'px';
+        });
+        rotationInput.addEventListener('input', function() {
+            videoPreview.style.transform = `rotate(${rotationInput.value}deg)`;
+        });
+        filterInput.addEventListener('change', function() {
+            if (filterInput.value === 'grayscale') {
+                videoPreview.style.filter = 'grayscale(100%)';
+            } else if (filterInput.value === 'sepia') {
+                videoPreview.style.filter = 'sepia(100%)';
+            } else if (filterInput.value === 'invert') {
+                videoPreview.style.filter = 'invert(100%)';
+            } else {
+                videoPreview.style.filter = 'none';
+            }
+        });
+
+        function toggleFilters() {
+            if (filtersContainer.style.display === "flex") {
+                filtersContainer.style.display = "none";
+            } else {
+                filtersContainer.style.display = "flex";
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function previewVideo() {
+            if (videoFile) {
+                videoPreview.load();
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0';
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                        progressBarContainer.style.display = 'none';
+                        document.getElementById('downloadBtn').style.display = 'block';
+                    } else {
+                        progress += 5;
+                        progressBar.style.width = progress + '%';
+                    }
+                }, 100);
+            }
+        }
+
+        function downloadVideo() {
+            const link = document.createElement('a');
+            link.href = videoPreview.src;
+            link.download = 'video.mp4';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
